@@ -3,6 +3,7 @@ package org.kablambda.greycrawler.components;
 import com.opencsv.bean.CsvToBean;
 import com.opencsv.bean.CsvToBeanBuilder;
 import org.apache.commons.io.FileUtils;
+import org.kablambda.greycrawler.model.FreeGreyhound;
 import org.kablambda.greycrawler.model.Greyhound;
 
 import java.io.File;
@@ -28,7 +29,7 @@ public class ChangeDetector {
                 .map(f -> read(f)).collect(Collectors.toList());
         Map<String, LocalDate> seen = new HashMap<>();
         Map<String, LocalDate> firstSeen = new HashMap<>();
-        Set<Greyhound> distinct = new HashSet<>();
+        Map<String,Greyhound> distinct = new HashMap<>();
         LocalDate firstDate = days.get(0).values().stream().findFirst().map(g -> g.getRecordedDate()).get();
         int max = 0;
         int min = Integer.MAX_VALUE;
@@ -39,10 +40,21 @@ public class ChangeDetector {
             System.out.println(days.get(i+1).entrySet().stream().findFirst().get().getValue().getRecordedDate() + " (" + count + ")");
             days.get(i).values().stream().forEach(g -> seen.put(g.getMicrochipNumber(), g.getRecordedDate()));
             days.get(i).values().stream().forEach(g -> firstSeen.putIfAbsent(g.getMicrochipNumber(), g.getRecordedDate()));
-            distinct.addAll(days.get(i).values());
+            days.get(i).values().stream().forEach(g -> distinct.putIfAbsent(g.getMicrochipNumber(), g));
             compare(firstDate, seen, firstSeen, days.get(i), days.get(i+1));
         }
+        days.get(days.size()-1).values().stream().forEach(g -> distinct.putIfAbsent(g.getMicrochipNumber(), g));
+
         System.out.println("Distinct: " + distinct.size() + " Min: " + min + " Max: " + max);
+        Map<String, FreeGreyhound> freeGreyhounds = new FreeGreyhounds().load();
+        Set<String> distinctMicrochipNumbers = distinct.keySet();
+        Set<String> freeGreyhoundsSeenOnGAP = freeGreyhounds.keySet().stream().filter(distinctMicrochipNumbers::contains).collect(Collectors.toSet());
+        if (!freeGreyhoundsSeenOnGAP.isEmpty()) {
+            System.out.printf("%d free greyhounds have appeared on GAP%n", freeGreyhoundsSeenOnGAP.size());
+            freeGreyhoundsSeenOnGAP.forEach(g -> System.out.printf("%s %s%n", distinct.get(g).toString(), freeGreyhounds.get(g).getGumtreeUrl()));
+        } else {
+            System.out.println("No free greyhounds have appeared on GAP");
+        }
     }
 
     private void compare(
