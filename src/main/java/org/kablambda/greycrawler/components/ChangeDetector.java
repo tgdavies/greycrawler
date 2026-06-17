@@ -11,6 +11,7 @@ import java.io.FileReader;
 import java.io.Reader;
 import java.time.Duration;
 import java.time.LocalDate;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -42,6 +43,7 @@ public class ChangeDetector {
             days.get(i).values().stream().forEach(g -> firstSeen.putIfAbsent(g.getMicrochipNumber(), g.getRecordedDate()));
             days.get(i).values().stream().forEach(g -> distinct.putIfAbsent(g.getMicrochipNumber(), g));
             compare(firstDate, seen, firstSeen, days.get(i), days.get(i+1));
+            System.out.println(reportAges(days.get(i).values()));
         }
         days.get(days.size()-1).values().stream().forEach(g -> distinct.putIfAbsent(g.getMicrochipNumber(), g));
 
@@ -55,6 +57,17 @@ public class ChangeDetector {
         } else {
             System.out.println("No free greyhounds have appeared on GAP");
         }
+        System.out.println(reportDistribution(firstDate, firstSeen, days.get(days.size()-1)));
+    }
+
+    private String reportAges(Collection<Greyhound> greyhounds) {
+        //int totalAge = greyhounds.stream().mapToInt(g -> g.)
+        return null;
+    }
+
+    private String reportDistribution(LocalDate firstDate, Map<String, LocalDate> firstSeen, Map<String, Greyhound> stringGreyhoundMap) {
+        //for (Greyhound )
+        return "";
     }
 
     private void compare(
@@ -73,7 +86,7 @@ public class ChangeDetector {
             System.out.println("Missing: (" + missing.size() + ")");
             missing.stream().sorted().forEach(dog -> {
                 String residencyInDays = firstSeen.containsKey(dog.getMicrochipNumber())
-                        ? residency(firstDate, firstSeen.get(dog.getMicrochipNumber()), dog.getRecordedDate())
+                        ? residencyAsString(firstDate, firstSeen.get(dog.getMicrochipNumber()), dog.getRecordedDate())
                         : "";
 
                 System.out.println(dog + residencyInDays);
@@ -83,7 +96,7 @@ public class ChangeDetector {
         // new
         Set<Greyhound> newDogs = new HashSet<>(changedNames);
         newDogs.removeAll(baseNames);
-        if (newDogs.size() > 0) {
+        if (!newDogs.isEmpty()) {
             System.out.println("New: (" + newDogs.size() + ")");
             newDogs.stream().sorted().forEach(dog -> {
                 String s = seen.containsKey(dog.getMicrochipNumber()) ? " seen on " + seen.get(dog.getMicrochipNumber()) : "";
@@ -92,12 +105,16 @@ public class ChangeDetector {
         }
     }
 
-    private String residency(LocalDate firstDate, LocalDate firstSeen, LocalDate lastSeen) {
+    private String residencyAsString(LocalDate firstDate, LocalDate firstSeen, LocalDate lastSeen) {
         if (firstDate.equals(firstSeen)) {
             return " since start";
         } else {
-           return " here for " + Duration.between(firstSeen.atStartOfDay(), lastSeen.atStartOfDay()).toDays();
+           return " here for " + residency(firstSeen, lastSeen);
         }
+    }
+
+    private long residency(LocalDate firstSeen, LocalDate lastSeen) {
+        return Duration.between(firstSeen.atStartOfDay(), lastSeen.atStartOfDay()).toDays();
     }
 
     private Map<String, Greyhound> read(File f) {
